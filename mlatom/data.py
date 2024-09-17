@@ -2,11 +2,11 @@
 '''
 .. code-block::
 
-  !---------------------------------------------------------------------------! 
-  ! data: Module for working with data                                        ! 
+  !---------------------------------------------------------------------------!
+  ! data: Module for working with data                                        !
   ! Implementations by: Pavlo O. Dral, Fuchun Ge,                             !
   !                     Shuang Zhang, Yi-Fan Hou, Yanchi Ou                   !
-  !---------------------------------------------------------------------------! 
+  !---------------------------------------------------------------------------!
 '''
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ element_symbol2atomic_number = {v: k for k,
 class atom:
     '''
     Create an atom object.
-    
+
     Arguments:
         nuclear_charge (int, optional): provide the nuclear charge to define the atom.
         atomic_number (int, optional): provide the atomic number to define the atom.
@@ -126,7 +126,7 @@ class molecule:
         Select an atom inside with subscription:
 
         .. code-block:: python
-           
+
            from mlatom.data import atom, molecule
            at = atom(element_symbol = 'C')
            mol = molecule(atoms = [at])
@@ -138,20 +138,20 @@ class molecule:
         multiplicity: The multiplicity of the molecule.
         load:
             Load a molecule object from a dumped file.
-            
+
             Updates a molecule object if initialized:
-            
+
                 ``mol = molecule(); mol.load(filename='mymol.json')``
             Returns a molecule object if called as class method:
-            
+
                 ``mol = molecule.load(filename='mymol.json')``
-                
+
             Arguments:
                 filename (str): filename or path
                 format (str, optional): currently, only 'json' format is supported.
     '''
     load = load_molecule_cls()
-    def __init__(self, charge: int = 0, multiplicity: int = 1, atoms: List[atom] = None, pbc: Optional[Union[np.ndarray, bool]] = None, cell: Optional[np.ndarray] = None): 
+    def __init__(self, charge: int = 0, multiplicity: int = 1, atoms: List[atom] = None, pbc: Optional[Union[np.ndarray, bool]] = None, cell: Optional[np.ndarray] = None):
         self.id = str(uuid.uuid4())
         self.charge = charge
         self.multiplicity = multiplicity
@@ -161,16 +161,16 @@ class molecule:
             self.atoms = []
         else:
             self.atoms = atoms
-        
+
         self.electronic_states = []
-    
+
     @property
     def pbc(self):
         '''
         The periodic boundary conditions of the molecule. Setting it with ``mol.pbc = True`` is equal to ``mol.pbc = [True, True, True]``.
         '''
         return self._pbc
-    
+
     @pbc.setter
     def pbc(self, pbc):
         if pbc is not None:
@@ -179,23 +179,23 @@ class molecule:
             pbc = np.array(pbc, bool)
             assert pbc.shape == (3,), 'please provide a valid pbc'
         self._pbc = pbc
-    
+
     @property
     def cell(self):
         '''
         The matrix of 3 vectors that defines the unicell. The setter of it simply wraps `ase.geometry.cell.cellpar_to_cell() <https://wiki.fysik.dtu.dk/ase/ase/geometry.html#ase.geometry.cellpar_to_cell>`_.
         '''
         return self._cell
-    
+
     @cell.setter
     def cell(self, cell):
         # reinvent the wheel with premade spokes from ASE
         if cell is not None:
-            from ase.geometry.cell import cellpar_to_cell 
+            from ase.geometry.cell import cellpar_to_cell
             cell = cellpar_to_cell(cell)
         self._cell = cell
-        
-    @property 
+
+    @property
     def cell_coordinates(self) -> np.ndarray:
         '''
         The relative coordinates in the cell.
@@ -203,18 +203,18 @@ class molecule:
         assert self.cell is not None, 'make sure this molecule has a valid cell'
         inverse_cell = np.linalg.inv(self.cell)
         return self.xyz_coordinates @ inverse_cell
-        
+
     @cell_coordinates.setter
     def cell_coordinates(self, value):
         assert self.cell is not None, 'make sure this molecule has a valid cell'
         self.xyz_coordinates = value @ self.cell
-            
+
     def map_to_unicell(self):
         '''
         Map all atoms outside the unicell into it.
         '''
         self.cell_coordinates -= np.floor(self.cell_coordinates) * self.pbc
-        
+
 
     def read_from_xyz_file(self, filename: str, format: Union[str, None] = None) -> molecule:
         '''
@@ -229,7 +229,7 @@ class molecule:
             - ``'NEWTON-X'`` or ``'NX'``
 
             - ``'turbomol'``
-            
+
         Arguments:
             filename (str): The name of the file to be read.
             format (str, optional): The format of the file.
@@ -252,7 +252,7 @@ class molecule:
             - ``'NEWTON-X'`` or ``'NX'``
 
             - ``'turbomol'``
-            
+
         Arguments:
             string (str): The string input.
             format (str, optional): The format of the string.
@@ -285,9 +285,9 @@ class molecule:
             for line in fxyz:
                 yy = line.split()
                 if len(yy) != 4:
-                    continue 
+                    continue
                 else:
-                    coords = array([float(xx)*constants.Bohr2Angstrom for xx in yy[0:3]]).astype(float)                    
+                    coords = array([float(xx)*constants.Bohr2Angstrom for xx in yy[0:3]]).astype(float)
                     self.atoms.append(atom(element_symbol=yy[3].capitalize(),
                                       xyz_coordinates=coords))
         return self
@@ -307,7 +307,7 @@ class molecule:
             else:
                 self.atoms.append(atom(element_symbol=species[i], xyz_coordinates=coordinates[i]))
         return self
-    
+
     def read_from_smiles_string(self, smi_string: str) -> molecule:
         '''
         Generate molecular geometry from a SMILES string provided.
@@ -317,28 +317,28 @@ class molecule:
         xyz_string = conversions.smi2xyz(smi_string)
         self.read_from_xyz_string(xyz_string)
         return self
-    
+
     @classmethod
     def from_xyz_file(cls, filename: str, format: Union[str, None] = None) -> molecule:
         '''
         Classmethod wrapper for :meth:`molecule.read_from_xyz_file`, returns a :class:`molecule` object.
         '''
         return cls().read_from_xyz_file(filename, format=format)
-    
+
     @classmethod
     def from_xyz_string(cls, string: str = None, format: Union[str, None] = None) -> molecule:
         '''
         Classmethod wrapper for :meth:`molecule.read_from_xyz_string`, returns a :class:`molecule` object.
         '''
         return cls().read_from_xyz_string(string, format=format)
-    
+
     @classmethod
     def from_numpy(cls, coordinates: np.ndarray, species: np.ndarray) -> molecule:
         '''
         Classmethod wrapper for :meth:`molecule.read_from_numpy`, returns a :class:`molecule` object.
         '''
         return cls().read_from_numpy(coordinates, species)
-    
+
     @classmethod
     def from_smiles_string(cls, smi_string: str) -> molecule:
         '''
@@ -377,19 +377,19 @@ class molecule:
             derivative: The derivative property to be added.
             property_name (str, optional): The name of the associated non-derivative property.
             xyz_derivative_property (str, optional): the name assign to the derivative property.
-            
+
         '''
         if not 'properties_and_their_derivatives' in self.__dict__.keys():
             self.properties_and_their_derivatives = {}
         self.properties_and_their_derivatives[property_name] = xyz_derivative_property
         self.add_xyz_vectorial_property(
             vector=derivative, xyz_vectorial_property=xyz_derivative_property)
-    
+
     add_xyz_derivative_properties = add_xyz_derivative_property
-    
+
     def add_hessian_property(self, hessian, hessian_propety='hessian'):
         self.add_scalar_property(hessian[:len(self)*3,:len(self)*3], property_name=hessian_propety)
-    
+
     def add_xyz_vectorial_property(self, vector, xyz_vectorial_property: str = 'xyz_vector') -> None:
         '''
         Add a XYZ vectorial property to the molecule.
@@ -397,12 +397,32 @@ class molecule:
         Arguments:
             vector: The vector to be added.
             xyz_vectorial_property (str, optional): the name assign to the vectorial property.
-            
+
         '''
         for j in range(len(self)):
             self.atoms[j].__dict__[xyz_vectorial_property] = vector[j]
 
     add_xyz_vectorial_properties = add_xyz_vectorial_property
+
+
+    def add_property_from_egrad1_file(self, filename: str, energy_property_name: str = 'energy', gradient_property_name: str = 'energy_gradients') -> None:
+        '''
+        Add energy and gradient from BDF output xxx.engrad1 file to the molecule.
+
+        Arguments:
+            filename (str): The .egrad1 filename that contains energy and gradient to be added.
+            energy_property_name (str, optional): the name assign to the energy property.
+            gradient_property_name (str, optional): the name assign to the gradient property.
+        '''
+        with open(filename, 'r') as f:
+            string_lst = f.readlines()
+            energy = float(string_lst[0].upper().replace(' ', '').removeprefix('ENERGY='))
+            vectors = [array(s.strip().split()[-3:]).astype(float) for s in string_lst[2:]]
+
+        self.__dict__[energy_property_name] = energy
+        assert len(vectors) == len(self.atoms), 'the number of atom does not match'
+        for i, atom in enumerate(self.atoms):
+            atom.__dict__[gradient_property_name] = vectors[i]
 
     def write_file_with_xyz_coordinates(self, filename: str, format: Union[str, None] = None) -> None:
         '''
@@ -464,7 +484,7 @@ class molecule:
 
     def get_atomic_numbers(self) -> np.ndarray:
         return array([atom.atomic_number for atom in self.atoms]).astype(int)
-    
+
     @property
     def atomic_numbers(self) -> np.ndarray:
         '''
@@ -474,31 +494,31 @@ class molecule:
 
     def get_element_symbols(self) -> np.ndarray:
         return array([atom.element_symbol for atom in self.atoms])
-    
+
     @property
     def element_symbols(self) -> np.ndarray:
         '''
         The element symbols of the atoms in the molecule.
         '''
         return self.get_element_symbols()
-    
+
     @property
     def smiles(self) -> str:
         '''
         The SMILES representation of the molecule.
         '''
         return conversions.xyz2smi(self.get_xyz_string())
-        
+
     def get_xyz_coordinates(self):
         return self.get_xyz_vectorial_properties('xyz_coordinates')
-    
-    @property 
+
+    @property
     def xyz_coordinates(self) -> np.ndarray:
         '''
         The XYZ geometry of the molecule.
         '''
         return self.get_xyz_vectorial_properties('xyz_coordinates')
-    
+
     @xyz_coordinates.setter
     def xyz_coordinates(self,value):
         for iatom in range(len(self.atoms)):
@@ -506,24 +526,24 @@ class molecule:
 
     def get_energy_gradients(self):
         return self.get_xyz_vectorial_properties('energy_gradients')
-    
+
     @property
     def energy_gradients(self):
         return self.get_energy_gradients()
-    
+
     @energy_gradients.setter
     def energy_gradients(self, value):
         self.add_xyz_derivative_property(value, property_name='energy', xyz_derivative_property='energy_gradients')
 
     def get_number_of_atoms(self):
         return len(self)
-    
+
     def get_property(self, property_name):
         if property_name in self.__dict__:
-            return self.__dict__[property_name] 
+            return self.__dict__[property_name]
         elif property_name in self.__dir__() and isinstance(getattr(self.__class__, property_name), property):
             return getattr(self, property_name)
-        else: 
+        else:
             return np.nan
 
     def set_property(self, **kwargs):
@@ -532,10 +552,10 @@ class molecule:
 
     def get_xyz_vectorial_properties(self, property_name):
         vectorial_properties = []
-        for atom in self.atoms: 
+        for atom in self.atoms:
             vectorial_properties.append(atom.__dict__[property_name] if property_name in atom.__dict__ else np.full(3, np.nan))
         return array(np.copy(vectorial_properties)).astype(float)
-    
+
     get_xyz_vectorial_property = get_xyz_vectorial_properties
 
     def get_nuclear_masses(self):
@@ -544,15 +564,15 @@ class molecule:
     @property
     def nuclear_masses(self):
         return self.get_nuclear_masses()
-    
+
     def calculate_kinetic_energy(self):
         velocity = np.copy(self.get_xyz_vectorial_properties('xyz_velocities'))
         Natoms = len(self.atoms)
         masses = self.nuclear_masses
         mass = masses.reshape(Natoms,1)
         return np.sum(velocity**2 * mass) / 2.0 * constants.ram2au * (constants.au2fs / constants.Bohr2Angstrom)**2 #
-    
-    @property 
+
+    @property
     def kinetic_energy(self) -> float:
         '''
         Give out the kinetic energy (A.U.) based on the xyz_velocities.
@@ -573,7 +593,7 @@ class molecule:
             factor = (target_kinetic_energy/initial_kinetic_energy)**0.5
         for atom in self.atoms:
             atom.xyz_velocities *= factor
-    
+
     def update_xyz_vectorial_properties(self, property_name, vectorial_properties):
         for iatom in range(len(self.atoms)):
             self.atoms[iatom].__dict__[property_name] = vectorial_properties[iatom]
@@ -602,21 +622,21 @@ class molecule:
             new_molecule = copy.deepcopy(self)
         new_molecule.id = str(uuid.uuid4())
         return new_molecule
-    
+
     def proliferate(
-            self, 
-            shifts: Optional[Iterable] = None, 
-            XYZshifts: Optional[Iterable] = None, 
-            Xshifts: Optional[Iterable] = [0], 
-            Yshifts: Optional[Iterable] = [0], 
+            self,
+            shifts: Optional[Iterable] = None,
+            XYZshifts: Optional[Iterable] = None,
+            Xshifts: Optional[Iterable] = [0],
+            Yshifts: Optional[Iterable] = [0],
             Zshifts: Optional[Iterable] = [0],
             PBC_constrained: bool = True,
-        ) -> molecule: 
+        ) -> molecule:
         '''
-        Proliferate the unicell by specified shifts along cell vectors (called X/Y/Z here). 
-        
+        Proliferate the unicell by specified shifts along cell vectors (called X/Y/Z here).
+
         Returns a new :class:`molecule` object.
-        
+
         Arguments:
             shifts (Iterable, optional): The list of shifts to perform. Each shift should be a 3D vector that indicates the coefficient applies to the corresponding cell vector.
             XYZshifts (Iterable, optional): Generate all possible shifts with given shift coefficients in all three directions when a list is specified. When a list of 3 lists is specified, it's equal to setting X/Y/Zshifts
@@ -624,27 +644,27 @@ class molecule:
             Yshifts (Iterable, optional): Specify all possible shift coefficients in the direction of the second cell vector.
             Zshifts (Iterable, optional): Specify all possible shift coefficients in the direction of the third cell vector.
             PBC_constrained (bool): Controls whether the shifts in some directions are disabled where corresponding PBC is false. Only applies to XYZshifts.
-            
+
         .. note::
-            
+
            Priorities for different types of shifts:
-                ``shifts`` > ``XYZshifts`` > ``X/Y/Zshifts`` 
-        
+                ``shifts`` > ``XYZshifts`` > ``X/Y/Zshifts``
+
         Examples:
 
             Single H atom in the centre of a cubic cell (2x2x2):
 
             .. code-block:: python
-                
-                mol = ml.molecule.from_numpy(np.ones((1, 3)), np.array([1])) 
-                mol.pbc = True 
-                mol.cell = 2 
-            
+
+                mol = ml.molecule.from_numpy(np.ones((1, 3)), np.array([1]))
+                mol.pbc = True
+                mol.cell = 2
+
             Proliferate to get two periods in all three directions,
             with shifts:
 
             .. code-block:: python
-                
+
                 new_mol = mol.proliferate(
                     shifts = [
                         [0, 0, 0],
@@ -657,26 +677,26 @@ class molecule:
                         [1, 1, 1],
                     ]
                 )
-            
+
             with XYZshifts:
 
             .. code-block:: python
-                
+
                 new_mol = mol.proliferate(XYZshifts=range(2))
                 # or
                 new_mol = mol.proliferate(XYZshifts=[range(2)]*3)
-                
-                
+
+
             with X/Y/Zshifts:
 
             .. code-block:: python
-                
+
                 new_mol = mol.proliferate(Xshifts=range(2), Yshifts=(0, 1), Zshifts=[0, 1]))
-            
+
             All scripts above will make ``new_mol.xyz_coordinates`` be:
-            
+
             .. code-block:: python
-            
+
                 array([[1., 1., 1.],
                        [3., 1., 1.],
                        [1., 3., 1.],
@@ -685,7 +705,7 @@ class molecule:
                        [3., 1., 3.],
                        [1., 3., 3.],
                        [3., 3., 3.]])
-                
+
         '''
         if shifts is None:
             if XYZshifts is not None:
@@ -699,12 +719,12 @@ class molecule:
                     Yshifts = Yshifts if self.pbc[1] else [0]
                     Zshifts = Zshifts if self.pbc[2] else [0]
             shifts = [np.array([i, j, k]) for k in Zshifts for j in Yshifts  for i in Xshifts]
-            
+
         xyzs = []
         for shift in shifts:
             xyzs.append(self.xyz_coordinates + shift @ self.cell)
         return self.from_numpy(np.concatenate(xyzs, 0), np.repeat(self.atomic_numbers, len(shifts)))
-    
+
     def dump(self, filename=None, format='json'):
         '''
         Dump the current molecule object into a file. Only in json format, which is supported now.
@@ -716,7 +736,7 @@ class molecule:
 
         if format.casefold() == 'gaussian'.casefold():
             write_gaussian_log(self, filename)
-    
+
     def get_internuclear_distance_matrix(self):
         natoms = len(self.atoms)
         distmat = np.zeros((natoms, natoms))
@@ -725,7 +745,7 @@ class molecule:
                 distmat[iatomind][jatomind] = self.internuclear_distance(iatomind, jatomind)
                 distmat[jatomind][iatomind] = distmat[iatomind][jatomind]
         return distmat
-    
+
     def get_bonds(self):
         bonds = []
         natoms = len(self.atoms)
@@ -742,17 +762,17 @@ class molecule:
                     if dist < 2.0:
                         bonds.append([iatomind, jatomind])
         return bonds
-    
+
     def internuclear_distance(self, atom1_index, atom2_index):
         aa = self.atoms[atom1_index]
         bb = self.atoms[atom2_index]
         return np.sqrt(np.sum(np.square(aa.xyz_coordinates-bb.xyz_coordinates)))
-    
+
     def is_it_linear(self):
         eps = 1.0E-8
         coord = self.xyz_coordinates
         if len(coord) == 2:
-            return True 
+            return True
         else:
             vec1 = coord[1] - coord[0]
             for ii in range(2,len(coord)):
@@ -774,7 +794,7 @@ class molecule:
 
     def align(self, ref, pivot='CoM'):
         pass
-    
+
     def info(self, properties = 'all', return_string=False):
         printstrs = []
         printstrs += [f" Molecule with {len(self.get_element_symbols())} atom(s): {', '.join(self.get_element_symbols())}", '']
@@ -811,43 +831,43 @@ class molecule:
             return molecular_database([self] + obj.molecules)
         if isinstance(obj, molecule):
             return molecular_database([self] + [obj])
-        
+
     def __str__(self):
         printstr = self.info(properties = 'all', return_string=True)
         return printstr
-   
+
     def __iter__(self):
         for atom in self.atoms:
             yield atom
 
     def __len__(self):
         return len(self.atoms)
-        
+
     def __getitem__(self, item):
         return self.atoms[item]
 
-    @property 
+    @property
     def state_energies(self) -> np.ndarray:
         '''
         The electronic state energies of the molecule.
         '''
         return np.array([state.energy for state in self.electronic_states])
-        
-    @property 
+
+    @property
     def state_gradients(self) -> np.ndarray:
         '''
         The electronic state energy gradients of the molecule.
         '''
         return np.array([state.energy_gradients for state in self.electronic_states])
-        
-    @property 
+
+    @property
     def energy_gaps(self) -> np.ndarray:
         '''
         The energy gaps of different states.
         '''
         return self.state_energies - self.state_energies[:, np.newaxis]
-    
-    @property 
+
+    @property
     def excitation_energies(self) -> np.ndarray:
         '''
         The excitation energies of the molecule from ground state.
@@ -893,27 +913,27 @@ class properties_tree_node():
         self.parent = parent
         self.children = children
         if self.parent != None:
-            if self.parent.children == None: self.parent.children = []   
+            if self.parent.children == None: self.parent.children = []
             if not self in self.parent.children:
                 self.parent.children.append(self)
         if self.children != None:
             for child in self.children:
                 child.parent=self
-            
+
     def sum(self, properties):
         for property_name in properties:
             property_values_list = []
             for child in self.children:
                 property_values_list.append(child.__dict__[property_name])
             self.__dict__[property_name] = np.sum(property_values_list, axis=0)
-    
+
     def average(self, properties):
         for property_name in properties:
             property_values_list = []
             for child in self.children:
                 property_values_list.append(child.__dict__[property_name])
             self.__dict__[property_name] = np.mean(property_values_list, axis=0)
-    
+
     def standard_deviation(self, properties):
         for property_name in properties:
             property_values_list = []
@@ -927,13 +947,13 @@ class molecular_database:
 
     Arguments:
         molecules (List[:class:`molecule`]): A list of molecule to be included in the molecular database.
-    
+
     Examples:
 
         Select an atom inside with subscription:
 
         .. code-block:: python
-           
+
            from mlatom.data import atom, molecule, molecular_database
            at = atom(element_symbol = 'C')
            mol = molecule(atoms = [at])
@@ -942,15 +962,15 @@ class molecular_database:
            # the output should be 'True'
 
         Slicing the database like a numpy array:
-           
+
         .. code-block:: python
 
-           from mlatom.data import molecular_database 
+           from mlatom.data import molecular_database
            molDB = molecular_database.from_xyz_file('devtests/al/h2_fci_db/xyz.dat')
            print(len(molDB))           # 451
            print(len(molDB[:100:4]))   # 25
 
-           
+
     '''
     def __init__(self, molecules: List[molecule] = None):
         if type(molecules) == type(None):
@@ -965,7 +985,7 @@ class molecular_database:
     def read_from_xyz_file(self, filename: str, append: bool = False) -> molecular_database:
         '''
         Load molecular geometry from XYZ file.
-            
+
         Arguments:
             filename (str): The name of the file to be read.
             append (bool, optional): Append to current database if True, otherwise clear the current database.
@@ -973,11 +993,11 @@ class molecular_database:
         with open(filename, 'r') as fxyz:
             string = fxyz.read()
         return self.read_from_xyz_string(string, append=append)
-            
+
     def read_from_xyz_string(self, string: str, append=False) -> molecular_database:
         '''
         Load molecular geometry from XYZ string.
-            
+
         Arguments:
             string (str): The name of the file to be read.
             append (bool, optional): Append to current database if True, otherwise clear the current database.
@@ -987,7 +1007,7 @@ class molecular_database:
         for xyz_string in xyz_strings:
             self.molecules.append(molecule.from_xyz_string(xyz_string))
         return self
-    
+
     def read_from_numpy(self, coordinates: np.ndarray, species: np.ndarray, append: bool = False) -> molecular_database:
         '''
         Load molecular geometries from a numpy array of coordinates and another one for species.
@@ -1000,7 +1020,7 @@ class molecular_database:
         for i in range(coordinates.shape[0]):
             self.molecules.append(molecule.from_numpy(coordinates[i], species[i]))
         return self
-    
+
     def read_from_smiles_file(self, smi_file: str, append: bool = False) -> molecular_database:
         '''
         Generate molecular geometries from a SMILES file provided.
@@ -1021,21 +1041,21 @@ class molecular_database:
         xyz_string = conversions.smi2xyz(smi_string)
         self.read_from_xyz_string(xyz_string)
         return self
-        
+
     @classmethod
     def from_xyz_file(cls, filename: str) -> molecular_database:
         '''
         Classmethod wrapper for :meth:`molecular_database.read_from_xyz_file`, returns a :class:`molecular_database` object.
         '''
         return cls().read_from_xyz_file(filename)
-    
+
     @classmethod
     def from_xyz_string(cls, string: str) -> molecular_database:
         '''
         Classmethod wrapper for :meth:`molecular_database.read_from_xyz_string`, returns a :class:`molecular_database` object.
         '''
         return cls().read_from_xyz_string(string)
-    
+
     @classmethod
     def from_numpy(cls, coordinates: np.ndarray, species: np.ndarray) -> molecular_database:
         '''
@@ -1049,14 +1069,14 @@ class molecular_database:
         Classmethod wrapper for :meth:`molecular_database.read_from_smiles_file`, returns a :class:`molecular_database` object.
         '''
         return cls().read_from_smiles_file(smi_file)
-    
+
     @classmethod
     def from_smiles_string(cls, smi_string: Union[str, List]) -> molecular_database:
         '''
         Classmethod wrapper for :meth:`molecular_database.read_from_smiles_string`, returns a :class:`molecular_database` object.
         '''
         return cls().read_from_smiles_string(smi_string)
-    
+
 
     def add_scalar_properties(self, scalars, property_name: str = 'y') -> None: # kind of redundant? mol.a = x does the samething
         '''
@@ -1107,7 +1127,7 @@ class molecular_database:
             filename (str): The filename that contains derivatives to be added.
             property_name (str, optional): The name of the associated non-derivative properties.
             xyz_derivative_property (str, optional): the name assign to the derivative properties.
-            
+
         '''
         if not 'properties_and_their_derivatives' in self.__dict__.keys():
             self.properties_and_their_derivatives = {}
@@ -1119,7 +1139,7 @@ class molecular_database:
         for i in range(len(hessians)):
             self.molecules[i].add_hessian_property(hessians[i], hessian_propety=hessian_propety)
 
-    
+
     def add_xyz_vectorial_properties(self, vectors, xyz_vectorial_property: str = 'xyz_vector') -> None:
         '''
         Add a XYZ vectorial properties to the molecules.
@@ -1127,7 +1147,7 @@ class molecular_database:
         Arguments:
             vectors: The vectors to be added.
             xyz_vectorial_property (str, optional): the name assign to the vectorial properties.
-            
+
         '''
         for i in range(vectors.shape[0]):
             self.molecules[i].add_xyz_vectorial_property(vectors[i], xyz_vectorial_property=xyz_vectorial_property)
@@ -1173,7 +1193,7 @@ class molecular_database:
                 for atom in mol.atoms:
                     fw.writelines('%-3s %25.13f %25.13f %25.13f\n' % (atom.element_symbol,
                                   atom.xyz_coordinates[0], atom.xyz_coordinates[1], atom.xyz_coordinates[2]))
-    
+
     def get_xyz_string(self) -> None:
         '''
         Return a string in XYZ format for the molecules.
@@ -1194,37 +1214,37 @@ class molecular_database:
 
     def get_number_of_atoms(self):
         return array([len(mol) for mol in self.molecules])
-    
+
     @property
     def number_of_atoms(self):
         return self.get_number_of_atoms()
-    
+
     def get_atomic_numbers(self):
         atomic_numbers = []
         for mol in self.molecules:
             atomic_numbers.append(mol.get_atomic_numbers())
         return array(atomic_numbers)
-    
+
     @property
     def atomic_numbers(self) -> np.ndarray:
         '''
         The 2D array of the atomic numbers of each atom, for all molecules in the database.
         '''
         return self.get_atomic_numbers()
-    
+
     def get_element_symbols(self):
         element_symbols = []
         for mol in self.molecules:
             element_symbols.append(mol.get_element_symbols())
         return array(element_symbols)
-    
+
     @property
     def element_symbols(self) -> np.ndarray:
         '''
         The 2D array of the element symbols of each atom, for all molecules in the database.
         '''
         return self.get_element_symbols()
-    
+
     @property
     def ids(self):
         '''
@@ -1238,7 +1258,7 @@ class molecular_database:
         The SMILES string of the molecules in the database.
         '''
         return conversions.xyz2smi(self.get_xyz_string())
-    
+
     def write_file_with_smiles(self, filename):
         '''
         Write the SMILES of the molecules in the database to a file.
@@ -1259,7 +1279,7 @@ class molecular_database:
         The electric charges of the molecules in the database.
         '''
         return self.get_properties(property_name='charge')
-    
+
     @charges.setter
     def charges(self, charges):
         self.set_properties(charge=charges)
@@ -1270,11 +1290,11 @@ class molecular_database:
         The multiplicities of the molecules in the database.
         '''
         return self.get_properties(property_name='multiplicity')
-    
+
     @multiplicities.setter
     def multiplicities(self, multiplicities):
         self.set_properties(multiplicity=multiplicities)
-        
+
     def get_properties(self, property_name='y',): # move to __getitem__
         '''
         Return the properties of the molecules by a given property name.
@@ -1283,7 +1303,7 @@ class molecular_database:
         for mol in self.molecules:
             properties.append(mol.get_property(property_name))
         return array(properties)
-    
+
     def set_properties(self, **kwargs): # move to __setitem__
         '''
         Set properties of the molecules by given property name(s) as keyword(s).
@@ -1291,13 +1311,13 @@ class molecular_database:
         for property_name, values in kwargs.items():
             for i, mol in enumerate(self.molecules):
                 mol.__dict__[property_name] = values[i]
-    
+
     def get_xyz_derivative_properties(self, xyz_derivative_property='xyz_derivatives'):
         '''
         Return XYZ derivative properties by the name.
         '''
         return self.get_xyz_vectorial_properties(xyz_derivative_property)
-    
+
     def get_xyz_vectorial_properties(self, property_name):
         '''
         Return XYZ vectorial properties by the name.
@@ -1306,20 +1326,20 @@ class molecular_database:
         for mol in self.molecules:
             coordinates.append(mol.get_xyz_vectorial_properties(property_name))
         return array(coordinates)
-    
+
     def write_file_with_xyz_derivative_properties(self, filename, xyz_derivative_property_to_write='xyz_derivatives'):
         '''
         Write XYZ derivative properties into a file.
         '''
         self.write_file_with_xyz_vectorial_properties(
             filename=filename, xyz_vectorial_property_to_write=xyz_derivative_property_to_write)
-    
+
     def write_file_energy_gradients(self, filename):
         '''
         Write energy gradients into a file.
         '''
         self.write_file_with_xyz_derivative_properties(filename=filename, xyz_derivative_property_to_write='energy_gradients')
-     
+
     def write_file_with_xyz_vectorial_properties(self, filename, xyz_vectorial_property_to_write='xyz_vector'):
         '''
         Write XYZ vectorial properties into a file.
@@ -1406,20 +1426,20 @@ class molecular_database:
         else:
             new_molecular_database = copy.deepcopy(self)
         return new_molecular_database
-    
+
     def filter_by_property(self, property_name):
         return molecular_database(self[~np.isnan(self.get_properties(property_name))])
-    
+
     def proliferate(self, *args, **kwargs) -> molecular_database:
         '''
         Proliferate the unicell by specified shifts along cell vectors.
-        
+
         Returns a new :class:`molecular_databse` object.
-        
+
         Check :meth:`molecule.proliferate` for details on options.
         '''
         return molecular_database([mol.proliferate(*args, **kwargs) for mol in self])
-    
+
     def dump(self, filename=None, format=None):
         '''
         Dump the molecular database to a file.
@@ -1430,7 +1450,7 @@ class molecular_database:
             jsonfile.close()
         if format.casefold() == 'npz'.casefold():
             np.savez(filename, **class_instance_to_dict(self))
-            
+
     def _load(self, filename=None, format=None):
         if format.casefold() == 'json'.casefold():
             jsonfile = open(filename, 'r')
@@ -1445,28 +1465,28 @@ class molecular_database:
                 for molecule in data['molecules']:
                     self.molecules.append(dict_to_molecule_class_instance(molecule))
         return self
-    
+
     @classmethod
     def load(cls, filename=None, format=None):
         '''
         Load a molecular database from a file.
         '''
         return cls()._load(filename=filename, format=format)
-            
+
     def batches(self, batch_size):
         batch_id = -1
         for batch_id in range(len(self) // batch_size):
             yield self[batch_id * batch_size:(batch_id + 1)*batch_size]
         if len(self) % batch_size:
             yield self[(batch_id + 1)*batch_size:]
-           
+
     def split(self, sampling='random', number_of_splits=2, split_equally=None, fraction_of_points_in_splits=None, indices=None):
         return sample(molecular_database_to_split=self, sampling=sampling, number_of_splits=number_of_splits, split_equally=split_equally, fraction_of_points_in_splits=fraction_of_points_in_splits, indices=indices)
 
-    @property         
+    @property
     def size(self):
         return len(self)
-    
+
     def __add__(self, obj):
         if isinstance(obj, molecular_database):
             return molecular_database(self.molecules + obj.molecules)
@@ -1482,7 +1502,7 @@ class molecular_database:
 
     def __len__(self):
         return len(self.molecules)
-    
+
     def __getitem__(self, item):
         if item is None:
             return None
@@ -1497,8 +1517,8 @@ class molecular_database:
             return molecular_database(self.molecules[item])
         else:
             return self.molecules[item]
-        
-    @property 
+
+    @property
     def xyz_coordinates(self):
         '''
         The XYZ coordinates of each atom in every molecule.
@@ -1512,7 +1532,7 @@ class molecular_database:
     def xyz_coordinates(self, value):
         for i, mol in enumerate(self):
             mol.xyz_coordinates = value[i]
-            
+
     def _is_uniform_cell(self):
         cells = self.get_properties('cell')
         pbcs = self.get_properties('pbc')
@@ -1525,7 +1545,7 @@ class molecular_database:
                     return True
             except:
                 return False
-            
+
     def view(self):
         '''
         Visualize the molecular database. Uses ``py3Dmol``.
@@ -1622,7 +1642,7 @@ def dict_to_molecule_class_instance(dd):
             mol.electronic_states = [dict_to_molecule_class_instance(state_dict) for state_dict in dd[key]]
         elif type(dd[key]) == dict:
             if 'parent' in dd[key].keys():
-                dict_to_properties_tree_node_class_instance(dd, key, mol)    
+                dict_to_properties_tree_node_class_instance(dd, key, mol)
             else:
                 mol.__dict__[key] = dd[key]
         elif type(dd[key]) == list:
@@ -1642,7 +1662,7 @@ def dict_to_reaction_step_class_instance(dd):
                 reaction.molecules.append(dict_to_molecule_class_instance(mol))
         elif type(dd[key]) == dict:
             if 'parent' in dd[key].keys():
-                dict_to_properties_tree_node_class_instance(dd, key, reaction)    
+                dict_to_properties_tree_node_class_instance(dd, key, reaction)
             else:
                 reaction.__dict__[key] = dd[key]
         else:
@@ -1658,7 +1678,7 @@ class molecular_trajectory():
         if type(steps) != type(None): self.steps = steps
         else: self.steps = []  # List with instancies of molecular_trajectory_step
 
-    def dump(self, filename=None, format=None):            
+    def dump(self, filename=None, format=None):
         '''
         Dump the molecular_trajectory object into a file.
 
@@ -1695,13 +1715,13 @@ class molecular_trajectory():
             dp_flag = True
             for istep in self.steps:
                 if not 'dipole_moment' in istep.molecule.__dict__.keys():
-                    dp_flag = False 
+                    dp_flag = False
             if dp_flag:
                 data['dipole_moment'] = []
             data['mass'] = self.steps[0].molecule.nuclear_masses
             data['species'] = self.steps[0].molecule.get_atomic_numbers()
             for istep in self.steps:
-                
+
                 data['time'].append(istep.time)
                 data['position'].append(istep.molecule.xyz_coordinates)
                 data['velocities'].append(istep.molecule.get_xyz_vectorial_properties('xyz_velocities'))
@@ -1725,7 +1745,7 @@ class molecular_trajectory():
                         for i in range(0, len(istep.molecule.electronic_states)):
                             aux_state_energies.append(istep.molecule.electronic_states[i].aux_energy)
                         data['aux_state_energies'].append(np.array(aux_state_energies))
-                        
+
                 if 'nonadiabatic_coupling_vectors' in data.keys(): data['nonadiabatic_coupling_vectors'].append(istep.molecule.get_xyz_vectorial_properties('nonadiabatic_coupling_vectors'))
                 data['kinetic_energy'].append(istep.molecule.kinetic_energy)
                 data['potential_energy'].append(istep.molecule.energy)
@@ -1757,7 +1777,7 @@ class molecular_trajectory():
                     data['dipole_moment'].append(istep.molecule.dipole_moment)
             with h5md(filename) as trajH5:
                 trajH5.write(data)
-        
+
         elif format.lower() == 'plain_text':
             moldb = molecular_database()
             for istep in self.steps:
@@ -1773,12 +1793,12 @@ class molecular_trajectory():
                 with open(filename+'.dp','w') as dpf:
                     for imolecule in moldb.molecules:
                         dpf.write('%25.13f %25.13f %25.13f %25.13f\n'%(imolecule.dipole_moment[0],imolecule.dipole_moment[1],imolecule.dipole_moment[2],imolecule.dipole_moment[3]))
-        
+
         elif format.casefold() == 'json'.casefold():
             jsonfile = open(filename, 'w')
             json.dump(class_instance_to_dict(self), jsonfile, indent=4)
             jsonfile.close()
-        
+
     def load(self, filename: str = None, format: str =None):
         '''
         Load the previously dumped molecular_trajectory from file.
@@ -1807,13 +1827,13 @@ class molecular_trajectory():
                         if int(data['need_to_be_labeled'][istep]) == 1:
                             molecule_istep.need_to_be_labeled = True
                         else:
-                            molecule_istep.need_to_be_labeled = False  
+                            molecule_istep.need_to_be_labeled = False
                 if 'uncertain' in data.keys():
                     if not np.isnan(data['uncertain'][istep]):
                         if int(data['uncertain'][istep]) == 1:
                             molecule_istep.uncertain = True
                         else:
-                            molecule_istep.uncertain = False   
+                            molecule_istep.uncertain = False
                 if 'state_energies' in data.keys():
                     molecule_istep.electronic_states=[]
                     molecule_istep.electronic_states.extend([molecule_istep.copy() for _ in range(len(data['state_energies'][istep]))])
@@ -1828,14 +1848,14 @@ class molecular_trajectory():
                     for i in range(0, len(data['state_gradients'][istep])):
                         if data['state_gradients'][istep][i] is not None:
                             molecule_istep.electronic_states[i].add_xyz_derivative_property(np.array(data['state_gradients'][istep][i]).astype(float), 'energy', 'energy_gradients')
-                     
-                    
+
+
                 if 'nonadiabatic_coupling_vectors' in data.keys():
                     for iatom in range(Natoms):
                         molecule_istep.atoms[iatom].nonadiabatic_coupling_vectors = data['nonadiabatic_coupling_vectors'][istep][iatom]
-                # kinetic_energy 
+                # kinetic_energy
                 # molecule_istep.kinetic_energy = data['kinetic_energy'][istep]
-                # potential_energy 
+                # potential_energy
                 molecule_istep.energy = data['potential_energy'][istep]
                 # total_energy
                 molecule_istep.total_energy = data['total_energy'][istep]
@@ -1843,7 +1863,7 @@ class molecular_trajectory():
                 if 'dipole_moment' in data.keys():
                     molecule_istep.dipole_moment = data['dipole_moment'][istep]
                 trajectory_step.molecule = molecule_istep
-                trajectory_step.step = istep 
+                trajectory_step.step = istep
                 trajectory_step.time = data['time'][istep]
                 # random_number
                 if 'random_number' in data.keys():
@@ -1855,7 +1875,7 @@ class molecular_trajectory():
                 if 'current_state' in data.keys():
                     trajectory_step.current_state = data['current_state'][istep]
                 self.steps.append(trajectory_step)
-        
+
         elif format.casefold() == 'json'.casefold():
             jsonfile = open(filename, 'r')
             data = json.load(jsonfile)
@@ -1866,8 +1886,8 @@ class molecular_trajectory():
                 for key in step.keys():
                     if not key in ['step', 'molecule']:
                         self.steps[-1].__dict__[key] = step[key]
-    
-   
+
+
     def get_xyz_string(self) -> str:
         '''
         Return the XYZ string of the molecules in the trajectory.
@@ -1876,13 +1896,13 @@ class molecular_trajectory():
         for istep in self.steps:
             xyz_string += istep.molecule.get_xyz_string()
         return xyz_string
-    
+
     def to_database(self) -> molecular_database:
         '''
         Return a molecular database that formed by the molecules in the trajectory.
         '''
         return molecular_database([step.molecule for step in self.steps])
-    
+
     def view(self):
         '''
         Visualize the molecular trajectory. Uses ``py3Dmol``.
@@ -1904,18 +1924,18 @@ class h5md():
     Arguments:
         filename (str): The filename of the h5md file output.
         data (Dict): The data to be stored (optional, if provided, the file will be closed after storing data).
-        mode (str, optional): A string that controls the file processing mode (default value: 'w' for a new file, 'r+' for an exisiting file). The choices are listed in the table below which is consistent with ``pyh5md.File()`` 
+        mode (str, optional): A string that controls the file processing mode (default value: 'w' for a new file, 'r+' for an exisiting file). The choices are listed in the table below which is consistent with ``pyh5md.File()``
 
-    .. table:: 
+    .. table::
        :align: center
 
        ========  ================================================
-        r        Readonly, file must exist 
+        r        Readonly, file must exist
         r+       Read/write, file must exist
         w        Create file, truncate if exists
         w- or x  Create file, fail if exists
        ========  ================================================
-          
+
     Examples:
 
     .. code-block:: python
@@ -1923,7 +1943,7 @@ class h5md():
        traj0 = h5md('traj.h5')  # open 'traj.h5'
        traj1 = h5md('/tmp/test.h5', mode='r')  # open an existing file in readonly mode
        traj2 = h5md('/tmp/traj2.h5', data={'time': 1.0, 'total_energy': -32.1, 'test': 8848}) # add some data to the file, then close the file
-      
+
        traj0.write(data) # write data to opened file
        traj0(data) # an alternative way to write data
 
@@ -1931,19 +1951,19 @@ class h5md():
        data = traj0() # an alternative way to export data
        with h5md('test.h5') as traj: # export with a with statement
            data = traj.export()
-           
+
 
        traj0.close() # close the file
-    
+
     .. note::
 
        the default data path in HDF5 file
 
            particles/all:
                'box', 'gradients', 'mass', 'nad', 'names', 'position', 'species', 'velocities'
-    
+
            observables:
-               'angular_momentum', 'generated_random_number', 'kinetic_energy', 'linear_momentum', 'nstatdyn', 'oscillator_strengths', 'populations', 'potential_energy', 'random_seed', 'sh_probabilities', 'total_energy', 'wavefunctions', 
+               'angular_momentum', 'generated_random_number', 'kinetic_energy', 'linear_momentum', 'nstatdyn', 'oscillator_strengths', 'populations', 'potential_energy', 'random_seed', 'sh_probabilities', 'total_energy', 'wavefunctions',
 
                and any other keywords
 
@@ -1993,7 +2013,7 @@ class h5md():
             self.properties[key] = element(self.observables, key, store='time', time=True, shape=shape)
         self.properties[key].own_step=True
 
-    
+
     def write(self, data: Dict[str, Any]) -> None:
         '''
         Write data to the opened H5 file. Data should be a dictionary-like object with 'time' in its keys().
@@ -2002,7 +2022,7 @@ class h5md():
         shape_offset = 1 if time.shape else 0
         for key, value in data.items():
             value=array(value)
-            if key == 'time' or not value.size: 
+            if key == 'time' or not value.size:
                 continue
             if key not in self.properties.keys():
                 self.add_properties(key, value, value.shape[shape_offset:])
@@ -2015,11 +2035,11 @@ class h5md():
 
     def export(self) -> Dict[str, np.ndarray]:
         '''
-        Export the data in the opened H5 file. 
-        
+        Export the data in the opened H5 file.
+
         Returns:
             A dictionary of the trajectory data in the H5 file.
-        '''        
+        '''
         import h5py
         data = {'time': self.part['position/time'][()]}
         for key in self.part.keys():
@@ -2058,7 +2078,7 @@ def sample(molecular_database_to_split=None, sampling='random', number_of_splits
     elif split_equally or (number_of_splits>2 and split_equally==None and fraction_of_points_in_splits==None):
         split_equally = True
         fraction_of_points_in_splits = [1 / number_of_splits for ii in range(number_of_splits)]
-        
+
     splits_DBs = []
     number_of_points_in_splits = []
     if sum(fraction_of_points_in_splits) > 1.0+1e-5:
@@ -2106,7 +2126,7 @@ def array(data, *args, **kwargs):
         return np.array(object=data, *args, **kwargs)
     except:
         return np.array(object=data, dtype=object, *args, **kwargs)
-    
+
 def read_y_file(filename=''):
     # Reads a file with scalar values.
     # Returns:
@@ -2511,9 +2531,9 @@ class isotopes:
                 most_similar_isotope = ii
         return most_similar_isotope
 
-    @classmethod 
+    @classmethod
     def get_isotopes_with_given_nuclear_charge(cls, nuclear_charge):
         return [each for each in cls.isotopes if each.nuculear_charge == nuclear_charge]
-    
+
 if __name__ == '__main__':
     print(__doc__)
